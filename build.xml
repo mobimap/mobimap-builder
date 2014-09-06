@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project basedir="." default="rebuild">
+
+  <property environment="env"/>
+  <property name="jdk.home" value="${env.JAVA_HOME}"/>
+
+  <property name="dest" value="classes.ant"/>
+  <property name="src" value="src"/>
+  <property name="obf" value="obfuscate-temp"/>
+  <property name="bin" value="bin"/>
+  <property name="citiesDir" value="cities"/>
+  <property name="versionsDir" value="versions"/>
+  <property name="appName" value="MobimapBuilder"/>
+
+  <path id="project.class.path">
+    <pathelement location="${dest}"/>
+    <pathelement location="${jdk.home}/jre/lib/charsets.jar"/>
+    <pathelement location="${jdk.home}/jre/lib/jaws.jar"/>
+    <pathelement location="${jdk.home}/jre/lib/jce.jar"/>
+    <pathelement location="${jdk.home}/jre/lib/jsse.jar"/>
+    <pathelement location="${jdk.home}/jre/lib/rt.jar"/>
+    <pathelement location="${jdk.home}/jre/lib/sunrsasign.jar"/>
+    <pathelement location="${jdk.home}/lib/dt.jar"/>
+    <pathelement location="${jdk.home}/lib/htmlconverter.jar"/>
+    <pathelement location="${jdk.home}/lib/tools.jar"/>
+
+    <pathelement location="lib/commons-io-1.4.jar"/>
+    <pathelement location="lib/commons-lang-2.4.jar"/>
+  </path>
+
+  <target name="init">
+    <mkdir dir="${dest}"/>
+    <mkdir dir="${bin}"/>
+  </target>
+
+  <target name="javacompile" depends="init">
+    <javac bootclasspathref="project.class.path" debug="false" deprecation="true" destdir="${dest}" nowarn="true" source="1.5" target="1.5">
+      <src path="${src}"/>
+    </javac>
+  </target>
+
+  <target name="archive">
+
+    <unjar src="lib/commons-io-1.4.jar" dest="${obf}"/>
+    <unjar src="lib/commons-lang-2.4.jar" dest="${obf}"/>
+
+    <manifest file="TEMP_MANIFEST">
+      <attribute name="Main-Class" value="com.ish.mobimapbuilder.Builder"/>
+    </manifest>
+
+    <jar compress="true" destfile="${bin}/${appName}.jar" manifest="TEMP_MANIFEST">
+      <fileset dir="${obf}">
+        <include name="**/*.*"/>
+      </fileset>
+      <fileset dir="src">
+        <include name="**/*.xml"/>
+        <include name="**/*.bin"/>
+      </fileset>
+    </jar>
+  </target>
+
+  <target name="clean">
+    <delete failonerror="false" includeemptydirs="true">
+      <fileset dir="${dest}"/>
+    </delete>
+    <delete failonerror="false" includeemptydirs="true">
+      <fileset dir="${bin}"/>
+    </delete>
+  </target>
+
+  <target name="tempdel">
+    <delete failonerror="false" includeemptydirs="true">
+      <fileset dir="${dest}"/>
+      <fileset dir="${obf}"/>
+    </delete>
+    <delete file="TEMP_MANIFEST"/>
+  </target>
+
+  <target name="obfuscate">
+    <taskdef resource="proguard/ant/task.properties"
+             classpath="sbin/proguard.jar" />
+
+    <mkdir dir="${obf}"/>
+
+    <proguard overloadaggressively="true"
+            allowaccessmodification="true"
+            printseeds="on" verbose="true"
+            usemixedcaseclassnames="false"
+            repackageclasses="a"
+            shrink="true" optimize="true">
+
+	    <injar  file="${dest}" />
+    	<outjar file="${obf}" />
+
+	    <libraryjar file="${jdk.home}/jre/lib/rt.jar"/>
+        <libraryjar file="lib/commons-io-1.4.jar"/>
+        <libraryjar file="lib/commons-lang-2.4.jar"/>
+
+      <keep extends="java.util.ResourceBundle"/>
+
+    <keepclasseswithmembers access="public">
+      <method access    ="public static"
+              type      ="void"
+              name      ="main"
+              parameters="java.lang.String[]" />
+    </keepclasseswithmembers>
+
+    <keepattribute name="*Annotation*" />
+
+    <keepclasseswithmembernames>
+      <method access="native" />
+    </keepclasseswithmembernames>
+
+    <keepclassmembers extends="java.lang.Enum">
+      <method access="public static"
+              type="**[]"
+              name="values"
+              parameters="" />
+      <method access="public static"
+              type="**"
+              name="valueOf"
+              parameters="java.lang.String" />
+    </keepclassmembers>
+
+    <keepclassmembers implements="java.io.Serializable">
+      <field  access    ="final"
+              type      ="long"
+              name      ="serialVersionUID" />
+      <method access    ="private"
+              type      ="void"
+              name      ="writeObject"
+              parameters="java.io.ObjectOutputStream" />
+      <method access    ="private"
+              type      ="void"
+              name      ="readObject"
+              parameters="java.io.ObjectOutputStream" />
+      <method type      ="java.lang.Object"
+              name      ="writeReplace"
+              parameters="" />
+      <method type      ="java.lang.Object"
+              name      ="readResolve"
+              parameters="" />
+    </keepclassmembers>
+
+    </proguard>
+  </target>
+
+  <target name="package" depends="archive"/>
+
+  <target depends="javacompile" name="compile"/>
+  <target depends="compile,obfuscate,package" name="make"/>
+  <target depends="clean,make,tempdel" name="rebuild"/>
+
+</project>
+
